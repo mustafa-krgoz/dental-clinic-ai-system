@@ -1,0 +1,15 @@
+# Sanal ortam
+.venv/
+
+# Model dosyaları
+model/
+*.h5
+
+# Python cache
+__pycache__/
+
+# Jupyter checkpoint'leri
+.ipynb_checkpoints/
+
+# Sistem dosyası
+.DS_Store
