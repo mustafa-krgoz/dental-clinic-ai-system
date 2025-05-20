@@ -4,19 +4,25 @@ from tensorflow.keras.preprocessing import image
 import numpy as np
 import os
 from PIL import Image
+import cv2
 
 app = Flask(__name__)
 
 # Modeli yükle
-model = load_model('../model/caries_model.h5')  # Modelin yolu
-classes = ['No Caries', 'Caries']  # Sınıflar
+model = load_model('../model/caries_model.h5')
+classes = ['No Caries', 'Caries']  # 0=No Caries, 1=Caries
 
-# Görseli ön işleme
+# Görseli ön işleme (eğitimle aynı işlemler)
 def preprocess_image(file_path, target_size=(224, 224)):
-    img = Image.open(file_path).convert('RGB')  # Görseli RGB formatına dönüştür
-    img = img.resize(target_size)  # Boyutlandır
+    # Görseli OpenCV ile oku ve eğitimdeki gibi işle
+    img = cv2.imread(file_path)
+    if img is None:
+        raise ValueError("Görsel okunamadı veya bozuk")
+    
+    img = cv2.resize(img, target_size)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Eğitimdeki gibi RGB formatına dönüştür
     img_array = np.array(img) / 255.0  # 0-1 arası normalleştir
-    img_array = np.expand_dims(img_array, axis=0)  # Modelin input formatı
+    img_array = np.expand_dims(img_array, axis=0)  # Batch boyutu ekle
     return img_array
 
 @app.route('/predict', methods=['POST'])
@@ -24,15 +30,12 @@ def predict():
     if 'file' not in request.files:
         return jsonify({'error': 'Dosya yüklenmedi.'})
 
-    files = request.files.getlist('file')  # Birden fazla dosya alıyoruz
-    predictions = []
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Dosya seçilmedi.'})
 
-    for file in files:
-        if file.filename == '':
-            predictions.append({'error': 'Dosya seçilmedi.'})
-            continue
-
-        # Dosyayı static klasörüne kaydet
+    try:
+        # Dosyayı geçici olarak kaydet
         file_path = os.path.join('static', file.filename)
         file.save(file_path)
 
@@ -40,23 +43,24 @@ def predict():
         img_array = preprocess_image(file_path)
 
         # Tahmin yap
-        prediction = model.predict(img_array)[0]
-        predicted_class = classes[np.argmax(prediction)]
-        confidence = float(np.max(prediction))
+        prediction_prob = model.predict(img_array)[0][0]  # Sigmoid çıkışı
+        predicted_class = classes[1] if prediction_prob >= 0.5 else classes[0]
+        confidence = prediction_prob if predicted_class == classes[1] else 1 - prediction_prob
 
-        # Görseli kaydet
-        img = Image.open(file_path)
-        img.save(f"static/{file.filename}")  # Resmi static klasörüne kaydet
+        # Sonuçları yuvarla
+        confidence = round(float(confidence), 4)
 
-        # Dosyayı kaydettikten sonra sil (isteğe bağlı olarak temizleme)
+        # Temizlik
         os.remove(file_path)
 
-        predictions.append({
+        return jsonify({
             'class': predicted_class,
-            'confidence': confidence
+            'confidence': confidence,
+            'probability': float(prediction_prob)  # Ham olasılık değeri
         })
 
-    return jsonify(predictions)  # Birden fazla dosya için tahmin sonuçlarını döneriz
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)

@@ -82,4 +82,4 @@ model.fit(datagen.flow(X_train, y_train, batch_size=16), validation_data=(X_test
 
 # 7. MODELİ KAYDET
 model.save('model/caries_model.h5')  # Modeli kaydet
-print("✅ Model başarıyla kaydedildi!")
+print("✅ Model başarıyla kaydedildi!"e)
