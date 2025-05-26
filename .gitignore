@@ -1,15 +1,35 @@
 # Sanal ortam
 .venv/
 
-# Model dosyaları
+# Model dosyaları ve ağırlıklar
 model/
 *.h5
+*.hdf5
+*.pb
+*.tflite
+*.onnx
 
 # Python cache
 __pycache__/
+*.py[cod]
 
-# Jupyter checkpoint'leri
+# Jupyter notebook geçici dosyaları
 .ipynb_checkpoints/
 
-# Sistem dosyası
+# IDE ve sistem dosyaları
 .DS_Store
+.vscode/
+.idea/
+*.log
+
+# Eğitim çıktıları
+*.png
+*.jpg
+*.jpeg
+training_history.*
+confusion_matrix.*
+roc_curve.*
+
+# Geçici dosyalar
+*.tmp
+*.swp
